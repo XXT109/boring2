@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抽抽今天吃什么 🍳🛵</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome 图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts 温暖圆润字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti 烟花庆祝效果库 -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            orange: '#FF8A3D',
+                            yellow: '#FFC83B',
+                            cream: '#FFF9F0',
+                            red: '#FF5A5F',
+                            green: '#4CAF50',
+                            brown: '#5D4037',
+                            cardBg: '#FFFFFF'
+                        }
+                    },
+                    fontFamily: {
+                        cute: ['"ZCOOL KuaiLe"', 'cursive', 'sans-serif'],
+                        sans: ['Nunito', 'PingFang SC', 'Microsoft YaHei', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'cute': '0 8px 0px 0px rgba(255, 138, 61, 0.2), 0 15px 25px -5px rgba(0, 0, 0, 0.05)',
+                        'cute-btn': '0 6px 0px 0px #E06D20',
+                        'cute-btn-yellow': '0 6px 0px 0px #D99B16',
+                        'cute-btn-green': '0 6px 0px 0px #388E3C',
+                        'active': '0 2px 0px 0px inset rgba(0, 0, 0, 0.2)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #FFF9F0;
+            background-image: radial-gradient(#FFE2C4 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
+        }
+
+        /* 动态水果/美食漂浮背景效果 */
+        .bg-bubbles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .bg-bubbles li {
+            position: absolute;
+            list-style: none;
+            display: block;
+            font-size: 2rem;
+            bottom: -100px;
+            animation: square 20s infinite linear;
+            opacity: 0.25;
+        }
+        @keyframes square {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0.3; }
+            100% { transform: translateY(-120vh) rotate(360deg); opacity: 0; }
+        }
+
+        /* 卡通按钮压下反馈 */
+        .btn-press {
+            transition: all 0.1s ease;
+        }
+        .btn-press:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0px 0px currentColor !important;
+        }
+
+        /* 槽位翻滚特效 */
+        .slot-container {
+            mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+            -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #FFF3E0;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #FFB74D;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #FF8A3D;
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800 min-h-screen flex flex-col justify-between selection:bg-brand-orange selection:text-white">
+
+    <!-- 背景悬浮小美食元素 -->
+    <ul class="bg-bubbles">
+        <li style="left: 10%; animation-delay: 0s;">🍔</li>
+        <li style="left: 20%; animation-delay: 2s; animation-duration: 17s;">🍜</li>
+        <li style="left: 25%; animation-delay: 4s;">🍕</li>
+        <li style="left: 40%; animation-delay: 0s; animation-duration: 22s;">🍗</li>
+        <li style="left: 55%; animation-delay: 1s;">🍟</li>
+        <li style="left: 70%; animation-delay: 5s;">🍱</li>
+        <li style="left: 80%; animation-delay: 3s; animation-duration: 18s;">🥟</li>
+        <li style="left: 90%; animation-delay: 2s;">🥑</li>
+    </ul>
+
+    <!-- 顶部导航和全局控制 -->
+    <header class="w-full max-w-3xl mx-auto pt-4 px-4 flex justify-between items-center z-10">
+        <button id="back-home-btn" onclick="goToHome()" class="hidden btn-press bg-white text-brand-orange font-bold px-4 py-2 rounded-2xl shadow-md border-2 border-brand-orange/20 flex items-center space-x-2 text-sm md:text-base hover:bg-orange-50">
+            <i class="fa-solid fa-house"></i>
+            <span>重新选择模式</span>
+        </button>
+        <div class="ml-auto flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs text-brand-brown/70 border border-orange-100 shadow-sm">
+            <span>✨ 解决吃啥难题</span>
+        </div>
+    </header>
+
+    <!-- 主体容器 -->
+    <main class="w-full max-w-2xl mx-auto px-4 py-6 flex-grow flex flex-col justify-center items-center">
+
+        <!-- ================= 1. 首页模式选择 ================= -->
+        <section id="view-home" class="w-full text-center space-y-8 animate-fade-in">
+            <div class="space-y-3">
+                <div class="inline-block relative">
+                    <span class="absolute -top-6 -left-6 text-4xl animate-bounce">🍲</span>
+                    <span class="absolute -bottom-2 -right-6 text-4xl animate-pulse">✨</span>
+                    <h1 class="text-4xl md:text-5xl font-cute text-brand-brown tracking-wide drop-shadow-sm">
+                        抽抽今天吃什么？
+                    </h1>
+                </div>
+                <p class="text-gray-500 font-medium text-sm md:text-base">告别选择困难症，把下一餐交给运气吧！</p>
+            </div>
+
+            <!-- 模式选择卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                <!-- 🛵 外卖模式按钮 -->
+                <div onclick="switchMode('takeout')" class="btn-press cursor-pointer bg-gradient-to-b from-orange-400 to-brand-orange text-white p-6 md:p-8 rounded-3xl shadow-cute border-4 border-white flex flex-col items-center group transition-all transform hover:-translate-y-1">
+                    <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-4xl mb-4 group-hover:scale-110 transition-transform">
+                        🛵
+                    </div>
+                    <h2 class="text-2xl font-cute tracking-wider mb-2">外卖模式</h2>
+                    <p class="text-xs md:text-sm text-orange-100 opacity-90">懒得下厨？三大美味分类，50+中华美食等你抽选！</p>
+                </div>
+
+                <!-- 🍳 自己做模式按钮 -->
+                <div onclick="switchMode('cook')" class="btn-press cursor-pointer bg-gradient-to-b from-yellow-400 to-brand-yellow text-brand-brown p-6 md:p-8 rounded-3xl shadow-cute border-4 border-white flex flex-col items-center group transition-all transform hover:-translate-y-1">
+                    <div class="w-20 h-20 bg-white/30 rounded-full flex items-center justify-center text-4xl mb-4 group-hover:scale-110 transition-transform">
+                        🍳
+                    </div>
+                    <h2 class="text-2xl font-cute tracking-wider mb-2">自己做模式</h2>
+                    <p class="text-xs md:text-sm text-amber-900/70 opacity-90">勾选家里现有的食材，智能匹配美味家常菜谱！</p>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= 2. 外卖模式模块 ================= -->
+        <section id="view-takeout" class="w-full hidden space-y-6">
+            <!-- 头部标题 -->
+            <div class="text-center space-y-1">
+                <h2 class="text-3xl font-cute text-brand-brown">🛵 外卖抽选点餐</h2>
+                <p class="text-xs text-gray-500">先选择你想吃的料理类别，再点击抽选！</p>
+            </div>
+
+            <!-- 分类选择 Tab -->
+            <div class="flex justify-center p-1.5 bg-orange-100/70 rounded-2xl gap-2 max-w-md mx-auto">
+                <button onclick="selectTakeoutCategory('面类粉类')" id="tab-面类粉类" class="takeout-tab flex-1 py-2.5 rounded-xl text-sm font-bold transition-all text-gray-600 hover:text-brand-orange">
+                    🍜 面类粉类
+                </button>
+                <button onclick="selectTakeoutCategory('饭类')" id="tab-饭类" class="takeout-tab flex-1 py-2.5 rounded-xl text-sm font-bold transition-all text-gray-600 hover:text-brand-orange">
+                    🍱 饭类
+                </button>
+                <button onclick="selectTakeoutCategory('炸类')" id="tab-炸类" class="takeout-tab flex-1 py-2.5 rounded-xl text-sm font-bold transition-all text-gray-600 hover:text-brand-orange">
+                    🍗 炸类
+                </button>
+            </div>
+
+            <!-- 老虎机/抽选 Display 区域 -->
+            <div class="bg-white rounded-3xl p-6 md:p-8 shadow-cute border-4 border-orange-100 text-center relative overflow-hidden">
+                <div class="absolute top-2 right-2 text-3xl opacity-10">🎰</div>
+
+                <!-- 未抽选/抽选主体框 -->
+                <div class="h-40 flex items-center justify-center my-2 bg-brand-cream rounded-2xl border-2 border-dashed border-orange-200 relative overflow-hidden">
+                    <div id="takeout-slot-machine" class="w-full h-full flex flex-col justify-center items-center text-center">
+                        <span id="takeout-placeholder" class="text-gray-400 font-medium">请点击上方分类，准备开始！</span>
+                        <div id="takeout-rolling-box" class="hidden font-cute text-3xl md:text-4xl text-brand-orange tracking-wide"></div>
+                    </div>
+                </div>
+
+                <!-- 抽选操作按钮区 -->
+                <div class="mt-6">
+                    <button id="start-takeout-btn" onclick="drawTakeoutFood()" class="btn-press w-full py-4 bg-brand-orange text-white font-cute text-xl rounded-2xl shadow-cute-btn hover:bg-orange-600 transition-all">
+                        🎲 开始抽选！
+                    </button>
+
+                    <!-- 抽选结束确认按钮组 -->
+                    <div id="takeout-result-actions" class="hidden flex gap-3">
+                        <button onclick="drawTakeoutFood()" class="btn-press flex-1 py-3 bg-brand-yellow text-brand-brown font-bold rounded-2xl shadow-cute-btn-yellow hover:bg-yellow-400 transition-all flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-rotate-right"></i> 🔄 再抽一次
+                        </button>
+                        <button onclick="confirmFoodSelection()" class="btn-press flex-1 py-3 bg-brand-green text-white font-bold rounded-2xl shadow-cute-btn-green hover:bg-green-600 transition-all flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-check"></i> ✅ 就吃这个了！
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= 3. 自己做模式模块 ================= -->
+        <section id="view-cook" class="w-full hidden space-y-6">
+            <div class="text-center space-y-1">
+                <h2 class="text-3xl font-cute text-brand-brown">🍳 自制美食匹配</h2>
+                <p class="text-xs text-gray-500">勾选家中现有食材，看看能做出什么好吃的！</p>
+            </div>
+
+            <!-- 食材多选区 -->
+            <div class="bg-white rounded-3xl p-5 md:p-6 shadow-cute border-4 border-yellow-100 space-y-4">
+                <div class="flex justify-between items-center pb-2 border-b border-gray-100">
+                    <span class="font-bold text-gray-700 text-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-basket-shopping text-brand-orange"></i> 选择现有食材：
+                    </span>
+                    <div class="space-x-2 text-xs">
+                        <button onclick="toggleAllIngredients(true)" class="text-brand-orange font-bold hover:underline">全选</button>
+                        <span class="text-gray-300">|</span>
+                        <button onclick="toggleAllIngredients(false)" class="text-gray-400 hover:underline">清空</button>
+                    </div>
+                </div>
+
+                <!-- 食材分类标签区 -->
+                <div id="ingredients-container" class="space-y-4 max-h-60 overflow-y-auto pr-1">
+                    <!-- JS动态渲染食材列表 -->
+                </div>
+            </div>
+
+            <!-- 匹配结果与决策栏 -->
+            <div class="bg-white rounded-3xl p-5 md:p-6 shadow-cute border-4 border-yellow-100 space-y-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <span class="text-xs text-gray-400 block">匹配结果</span>
+                        <span id="matched-count" class="font-bold text-lg text-brand-brown">已为您解锁 <span class="text-brand-orange font-cute text-2xl">0</span> 道菜</span>
+                    </div>
+                    <!-- 抽选按钮 -->
+                    <button id="cook-random-btn" onclick="drawCookRecipe()" class="btn-press px-5 py-2.5 bg-brand-yellow text-brand-brown font-bold rounded-2xl shadow-cute-btn-yellow hover:bg-yellow-400 text-sm flex items-center gap-1.5">
+                        <span>🎲 帮我选一道</span>
+                    </button>
+                </div>
+
+                <!-- 抽选出来的单菜卡片展示区 (默认隐藏) -->
+                <div id="cook-result-card" class="hidden p-4 bg-orange-50 rounded-2xl border-2 border-brand-orange border-dashed text-center animate-fade-in relative">
+                    <span class="text-xs font-bold text-brand-orange bg-orange-200 px-2.5 py-0.5 rounded-full inline-block mb-1">今日推荐大厨菜</span>
+                    <h3 id="selected-recipe-name" class="font-cute text-3xl text-brand-brown my-1">---</h3>
+                    <p id="selected-recipe-ingredients" class="text-xs text-gray-500">所需食材：--</p>
+                </div>
+
+                <!-- 手动卡片展开区 -->
+                <div>
+                    <button onclick="toggleRecipeList()" class="w-full py-2 flex justify-center items-center gap-1 text-xs text-gray-400 hover:text-brand-orange">
+                        <span id="toggle-list-text">展开匹配菜谱列表</span>
+                        <i id="toggle-list-icon" class="fa-solid fa-chevron-down"></i>
+                    </button>
+
+                    <div id="matched-recipes-list" class="hidden grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-3 max-h-56 overflow-y-auto">
+                        <!-- JS 填充卡片 -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 页脚版权 -->
+    <footer class="w-full text-center py-4 text-xs text-gray-400 font-medium">
+        <p>🍽️ 抽抽今天吃什么 · 美味不再纠结 ❤️</p>
+    </footer>
+
+    <!-- 全局Modal弹窗 (用于“就吃这个了”或无匹配提示) -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl border-4 border-orange-200 animate-scale-up">
+            <div id="modal-icon" class="text-5xl">🎉</div>
+            <h3 id="modal-title" class="font-cute text-2xl text-brand-brown">确定吃这个啦！</h3>
+            <p id="modal-content" class="text-sm text-gray-600">祝你用餐愉快，吃得香香的！</p>
+            <button onclick="closeModal()" class="btn-press w-full py-3 bg-brand-orange text-white font-bold rounded-xl shadow-cute-btn hover:bg-orange-600">
+                好耶！
+            </button>
+        </div>
+    </div>
+
+
+    <!-- ==========================================
+         JavaScript 业务逻辑与完整美食数据库
+    =========================================== -->
+    <script>
+        // --- 1. 数据库定义 ---
+        
+        // 1.1 外卖数据库 (面粉类、饭类、炸类 各50种)
+        const takeoutData = {
+            "面类粉类": [
+                "广东炒河粉", "南昌炒粉", "新疆炒米粉", "宁夏羊肉炒面", "台州炒粉干", 
+                "豉油皇炒面", "扬州炒面", "肉丝炒面", "海鲜炒意面", "鸡蛋炒面", 
+                "酸菜炒米粉", "牛肉炒河粉", "三鲜炒面", "炒面皮", "杂粮炒粉",
+                "兰州牛肉面", "重庆小面", "柳州螺蛳粉", "桂林米粉", "武汉热干面", 
+                "山西刀削面", "四川酸辣粉", "北京炸酱面", "河南烩面", "广东云吞面", 
+                "沙县拌面", "广式肠粉", "新疆拌面(拉条子)", "陕西油泼面", "岐山臊子面", 
+                "南京鸭血粉丝汤", "云南过桥米线", "花甲米线", "湖南牛肉粉", "绵阳米粉", 
+                "温州瘦肉丸", "上海阳春面", "延边冷面", "宜宾燃面", "客家腌面", 
+                "红烧牛肉面", "成都肥肠粉", "西安羊肉泡馍", "担担面", "常德津市牛肉粉", 
+                "遵义羊肉粉", "海南粉", "镇江锅盖面", "葱油拌面", "长春打卤面"
+            ],
+            "饭类": [
+                "扬州炒饭", "菠萝炒饭", "铁板炒饭", "老干妈炒饭", "咸鱼鸡粒炒饭", 
+                "生炒牛肉饭", "碎肉炒饭", "蛋炒饭", "酱油炒饭", "海鲜炒饭", 
+                "腊肉炒饭", "酸菜炒饭", "黑椒牛肉炒饭", "韩式泡菜炒饭", "咖喱炒饭",
+                "黄焖鸡米饭", "台湾卤肉饭", "广式煲仔饭", "湘味木桶饭", "湖南盖浇饭", 
+                "隆江猪脚饭", "海南鸡饭", "酸辣土豆丝饭", "鱼香肉丝饭", "宫保鸡丁饭", 
+                "麻婆豆腐饭", "四川回锅肉饭", "番茄炒蛋饭", "江西小炒肉拌饭", "东北大骨饭", 
+                "韩式石锅拌饭", "上海咸肉菜饭", "金牌梅菜扣肉饭", "温州糯米饭", "东北烤肉拌饭", 
+                "咖喱鸡块饭", "黑椒牛柳饭", "老卤肥肠饭", "红烧排骨饭", "新疆手抓饭", 
+                "酸菜鱼饭", "四川水煮肉片饭", "香辣虾饭", "地三鲜盖浇饭", "毛血旺拌饭", 
+                "小炒黄牛肉饭", "农家一碗香饭", "辣子鸡丁饭", "烧鹅/烧鸭饭", "豆角焖饭"
+            ],
+            "炸类": [
+                "炸鸡柳", "大鸡排", "老北京炸酱串", "东北炸鸡架", "四川小酥肉", 
+                "炸串涮羊肉", "炸鸡翅", "炸鸡腿", "炸年糕", "炸鲜奶", 
+                "炸薯条", "炸薯块", "炸鸡米花", "炸面筋", "炸平菇/蘑菇", 
+                "长沙炸臭豆腐", "炸春卷", "炸香蕉", "炸小黄鱼", "炸虾饼", 
+                "炸藕盒", "炸茄盒", "炸油条", "炸麻圆", "炸牛排", 
+                "炸猪排", "炸小排骨", "炸蟹棒", "炸鱼排", "炸鹌鹑蛋", 
+                "炸鸡皮", "炸鸡心", "炸鸡肝", "炸肉丸子", "炸地瓜丸", 
+                "炸芋圆", "炸土豆塔", "炸鸡掌/鸡爪", "炸洋葱圈", "炸酥鱼", 
+                "炸麻花", "炸南瓜饼", "炸黄金糕", "炸羊肉串", "炸牛肉串", 
+                "炸五花肉串", "炸鱼豆腐", "炸淀粉肠", "炸年糕串", "炸香肠"
+            ]
+        };
+
+        // 1.2 自己做模式 - 分类食材库
+        const ingredientsData = {
+            "肉类/海鲜": ["猪肉", "牛肉", "羊肉", "鸡肉", "排骨", "虾", "鱼"],
+            "蔬菜类": ["西红柿", "土豆", "青椒", "白菜", "黄瓜", "木耳", "茄子", "葱", "蒜", "洋葱", "蘑菇"],
+            "蛋/豆腐类": ["鸡蛋", "豆腐"],
+            "主食类": ["米饭", "面条", "米粉"]
+        };
+
+        // 1.3 自己做模式 - 80道家常菜谱
+        const diyRecipes = [
+            // 蛋类/豆腐
+            { name: "番茄炒蛋", ingredients: ["西红柿", "鸡蛋"] },
+            { name: "青椒炒鸡蛋", ingredients: ["青椒", "鸡蛋"] },
+            { name: "大葱炒鸡蛋", ingredients: ["葱", "鸡蛋"] },
+            { name: "虾仁炒滑蛋", ingredients: ["虾", "鸡蛋"] },
+            { name: "蒸蛋羹", ingredients: ["鸡蛋"] },
+            { name: "麻婆豆腐", ingredients: ["豆腐", "猪肉"] },
+            { name: "家常豆腐", ingredients: ["豆腐", "木耳", "青椒"] },
+            { name: "小葱拌豆腐", ingredients: ["豆腐", "葱"] },
+
+            // 猪肉类
+            { name: "青椒炒肉丝", ingredients: ["青椒", "猪肉"] },
+            { name: "农家小炒肉", ingredients: ["青椒", "猪肉", "蒜"] },
+            { name: "鱼香肉丝", ingredients: ["猪肉", "木耳", "青椒"] },
+            { name: "京酱肉丝", ingredients: ["猪肉", "葱"] },
+            { name: "黑木耳炒肉", ingredients: ["木耳", "猪肉"] },
+            { name: "洋葱炒猪肉", ingredients: ["洋葱", "猪肉"] },
+            { name: "四川回锅肉", ingredients: ["猪肉", "青椒"] },
+            { name: "红烧肉", ingredients: ["猪肉"] },
+            { name: "糖醋排骨", ingredients: ["排骨"] },
+
+            // 鸡肉/鸭肉类
+            { name: "宫保鸡丁", ingredients: ["鸡肉", "黄瓜"] },
+            { name: "辣子鸡", ingredients: ["鸡肉", "青椒"] },
+            { name: "可乐鸡翅", ingredients: ["鸡肉"] },
+            { name: "黄焖鸡", ingredients: ["鸡肉", "土豆", "青椒", "蘑菇"] },
+            { name: "小鸡炖蘑菇", ingredients: ["鸡肉", "蘑菇"] },
+
+            // 牛肉/羊肉类
+            { name: "葱爆牛肉", ingredients: ["牛肉", "葱"] },
+            { name: "黑椒牛柳", ingredients: ["牛肉", "洋葱", "青椒"] },
+            { name: "土豆炖牛肉", ingredients: ["牛肉", "土豆"] },
+            { name: "番茄炖牛腩", ingredients: ["牛肉", "西红柿"] },
+            { name: "葱爆羊肉", ingredients: ["羊肉", "葱"] },
+            { name: "孜然羊肉", ingredients: ["羊肉", "洋葱"] },
+
+            // 水产类
+            { name: "清蒸鱼", ingredients: ["鱼", "葱"] },
+            { name: "红烧鱼", ingredients: ["鱼", "葱", "蒜"] },
+            { name: "油爆虾", ingredients: ["虾"] },
+            { name: "蒜蓉蒸虾", ingredients: ["虾", "蒜"] },
+
+            // 蔬菜类
+            { name: "酸辣土豆丝", ingredients: ["土豆", "青椒"] },
+            { name: "干炒土豆片", ingredients: ["土豆", "青椒"] },
+            { name: "地三鲜", ingredients: ["土豆", "茄子", "青椒"] },
+            { name: "风味茄子", ingredients: ["茄子"] },
+            { name: "蒜蓉手撕包菜", ingredients: ["白菜", "蒜"] },
+            { name: "醋溜白菜", ingredients: ["白菜"] },
+
+            // 主食/面饭
+            { name: "蛋炒饭", ingredients: ["米饭", "鸡蛋", "葱"] },
+            { name: "酱油炒饭", ingredients: ["米饭", "鸡蛋"] },
+            { name: "西红柿鸡蛋面", ingredients: ["面条", "西红柿", "鸡蛋"] },
+            { name: "葱油拌面", ingredients: ["面条", "葱"] },
+            { name: "炸酱面", ingredients: ["面条", "猪肉", "黄瓜"] },
+            { name: "青菜肉丝面", ingredients: ["面条", "猪肉"] },
+            { name: "鸡蛋炒粉", ingredients: ["米粉", "鸡蛋"] }
+        ];
+
+
+        // --- 2. 全局状态变量 ---
+        let currentMode = 'home'; // 'home' | 'takeout' | 'cook'
+        let currentTakeoutCategory = '面类粉类';
+        let currentRolledFood = '';
+        let isRolling = false;
+        let selectedIngredients = new Set(["西红柿", "鸡蛋", "土豆", "猪肉"]); // 默认勾选几项
+        let matchedRecipes = [];
+
+
+        // --- 3. 页面切换逻辑 ---
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-takeout').classList.add('hidden');
+            document.getElementById('view-cook').classList.add('hidden');
+
+            const backBtn = document.getElementById('back-home-btn');
+
+            if (mode === 'home') {
+                document.getElementById('view-home').classList.remove('hidden');
+                backBtn.classList.add('hidden');
+            } else if (mode === 'takeout') {
+                document.getElementById('view-takeout').classList.remove('hidden');
+                backBtn.classList.remove('hidden');
+                selectTakeoutCategory('面类粉类');
+            } else if (mode === 'cook') {
+                document.getElementById('view-cook').classList.remove('hidden');
+                backBtn.classList.remove('hidden');
+                renderIngredientsSelector();
+                updateMatchedRecipes();
+            }
+        }
+
+        function goToHome() {
+            switchMode('home');
+        }
+
+
+        // --- 4. 外卖模式逻辑 ---
+        function selectTakeoutCategory(category) {
+            if (isRolling) return;
+            currentTakeoutCategory = category;
+
+            // 更新Tab UI样式
+            document.querySelectorAll('.takeout-tab').forEach(tab => {
+                tab.classList.remove('bg-white', 'text-brand-orange', 'shadow-sm');
+                tab.classList.add('text-gray-600');
+            });
+            const activeTab = document.getElementById(`tab-${category}`);
+            if (activeTab) {
+                activeTab.classList.add('bg-white', 'text-brand-orange', 'shadow-sm');
+                activeTab.classList.remove('text-gray-600');
+            }
+
+            // 重置抽选面板状态
+            document.getElementById('takeout-placeholder').classList.remove('hidden');
+            document.getElementById('takeout-placeholder').innerText = `已选「${category}」，点击下方开始抽选！`;
+            document.getElementById('takeout-rolling-box').classList.add('hidden');
+            document.getElementById('start-takeout-btn').classList.remove('hidden');
+            document.getElementById('takeout-result-actions').classList.add('hidden');
+        }
+
+        function drawTakeoutFood() {
+            if (isRolling) return;
+            isRolling = true;
+
+            const foodList = takeoutData[currentTakeoutCategory];
+            const placeholder = document.getElementById('takeout-placeholder');
+            const rollingBox = document.getElementById('takeout-rolling-box');
+            const startBtn = document.getElementById('start-takeout-btn');
+            const actionBtns = document.getElementById('takeout-result-actions');
+
+            placeholder.classList.add('hidden');
+            rollingBox.classList.remove('hidden');
+            startBtn.classList.add('hidden');
+            actionBtns.classList.add('hidden');
+
+            // 快速翻滚特效 (1.5秒)
+            let counter = 0;
+            const duration = 1500;
+            const intervalTime = 50;
+            const totalSteps = duration / intervalTime;
+
+            const timer = setInterval(() => {
+                const randomIndex = Math.floor(Math.random() * foodList.length);
+                rollingBox.innerText = foodList[randomIndex];
+                counter++;
+
+                if (counter >= totalSteps) {
+                    clearInterval(timer);
+                    // 确定最终美食
+                    const finalIndex = Math.floor(Math.random() * foodList.length);
+                    currentRolledFood = foodList[finalIndex];
+                    rollingBox.innerText = currentRolledFood;
+                    
+                    // 播放成功特效
+                    confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
+
+                    isRolling = false;
+                    actionBtns.classList.remove('hidden');
+                }
+            }, intervalTime);
+        }
+
+        function confirmFoodSelection() {
+            if (!currentRolledFood) return;
+            showModal('🎉 美味决定啦！', `今天外卖就吃【${currentRolledFood}】！祝你享用愉快！`, '🛵');
+        }
+
+
+        // --- 5. 自己做模式逻辑 ---
+
+        // 渲染食材选择区
+        function renderIngredientsSelector() {
+            const container = document.getElementById('ingredients-container');
+            container.innerHTML = '';
+
+            for (const [category, items] of Object.entries(ingredientsData)) {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'space-y-1.5';
+
+                const catTitle = document.createElement('div');
+                catTitle.className = 'text-xs font-bold text-gray-400';
+                catTitle.innerText = category;
+                groupDiv.appendChild(catTitle);
+
+                const itemsDiv = document.createElement('div');
+                itemsDiv.className = 'flex flex-wrap gap-2';
+
+                items.forEach(item => {
+                    const isChecked = selectedIngredients.has(item);
+                    const tag = document.createElement('button');
+                    tag.type = 'button';
+                    tag.onclick = () => toggleIngredient(item);
+                    tag.className = `btn-press px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1 ${
+                        isChecked 
+                        ? 'bg-amber-100 text-brand-brown border-amber-300 shadow-sm' 
+                        : 'bg-gray-50 text-gray-500 border-gray-200 opacity-70 hover:opacity-100'
+                    }`;
+                    tag.innerHTML = `${isChecked ? '✓' : '+'} ${item}`;
+                    itemsDiv.appendChild(tag);
+                });
+
+                groupDiv.appendChild(itemsDiv);
+                container.appendChild(groupDiv);
+            }
+        }
+
+        function toggleIngredient(item) {
+            if (selectedIngredients.has(item)) {
+                selectedIngredients.delete(item);
+            } else {
+                selectedIngredients.add(item);
+            }
+            renderIngredientsSelector();
+            updateMatchedRecipes();
+        }
+
+        function toggleAllIngredients(selectAll) {
+            if (selectAll) {
+                Object.values(ingredientsData).flat().forEach(item => selectedIngredients.add(item));
+            } else {
+                selectedIngredients.clear();
+            }
+            renderIngredientsSelector();
+            updateMatchedRecipes();
+        }
+
+        // 智能算法：匹配符合条件的菜谱
+        function updateMatchedRecipes() {
+            const currentSelected = Array.from(selectedIngredients);
+            
+            // 规则：菜谱的所有所需食材必须都在用户勾选的列表中
+            matchedRecipes = diyRecipes.filter(recipe => {
+                return recipe.ingredients.every(ing => currentSelected.includes(ing));
+            });
+
+            // 更新UI计数
+            document.getElementById('matched-count').innerHTML = `已为您解锁 <span class="text-brand-orange font-cute text-2xl">${matchedRecipes.length}</span> 道菜`;
+
+            // 隐藏上一次单抽结果
+            document.getElementById('cook-result-card').classList.add('hidden');
+
+            // 渲染手动查看列表
+            renderMatchedListUI();
+        }
+
+        function renderMatchedListUI() {
+            const listContainer = document.getElementById('matched-recipes-list');
+            listContainer.innerHTML = '';
+
+            if (matchedRecipes.length === 0) {
+                listContainer.innerHTML = `<div class="col-span-full py-4 text-center text-xs text-gray-400">暂无完全匹配的菜谱，尝试多选几种食材吧！</div>`;
+                return;
+            }
+
+            matchedRecipes.forEach(recipe => {
+                const card = document.createElement('div');
+                card.className = 'p-3 bg-yellow-50/50 rounded-xl border border-yellow-200/60 text-center';
+                card.innerHTML = `
+                    <div class="font-bold text-sm text-brand-brown">${recipe.name}</div>
+                    <div class="text-[10px] text-gray-400 mt-0.5">食材: ${recipe.ingredients.join(', ')}</div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        function toggleRecipeList() {
+            const list = document.getElementById('matched-recipes-list');
+            const text = document.getElementById('toggle-list-text');
+            const icon = document.getElementById('toggle-list-icon');
+
+            if (list.classList.contains('hidden')) {
+                list.classList.remove('hidden');
+                text.innerText = '收起匹配菜谱列表';
+                icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+            } else {
+                list.classList.add('hidden');
+                text.innerText = '展开匹配菜谱列表';
+                icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+            }
+        }
+
+        // 抽取一道自制菜谱
+        function drawCookRecipe() {
+            if (matchedRecipes.length === 0) {
+                showModal('现有食材有点难搭哦 🥺', '尝试多勾选几种常用食材（如鸡蛋、青椒、肉类等），就能解锁美味菜谱啦！', '🥦');
+                return;
+            }
+
+            const card = document.getElementById('cook-result-card');
+            const nameEl = document.getElementById('selected-recipe-name');
+            const ingEl = document.getElementById('selected-recipe-ingredients');
+
+            // 随机选一道
+            const randomRecipe = matchedRecipes[Math.floor(Math.random() * matchedRecipes.length)];
+
+            nameEl.innerText = randomRecipe.name;
+            ingEl.innerText = `所需食材：${randomRecipe.ingredients.join('、')}`;
+
+            card.classList.remove('hidden');
+            confetti({ particleCount: 50, spread: 50, origin: { y: 0.7 } });
+        }
+
+
+        // --- 6. 通用 Modal 弹窗处理 ---
+        function showModal(title, content, icon = '🎉') {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-content').innerText = content;
+            document.getElementById('modal-icon').innerText = icon;
+            document.getElementById('custom-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        }
+
+        // 初始化显示首页
+        window.onload = function() {
+            switchMode('home');
+        };
+    </script>
+</body>
+</html>
